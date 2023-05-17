@@ -1,37 +1,57 @@
-import throttle from "lodash.throttle";
+import throttle from 'lodash.throttle';
 
-const feedbackForm = document.querySelector(".js-feedback-form");
-const emailInput = feedbackForm.querySelector('input[name="email"]');
-const messageInput = feedbackForm.querySelector('textarea[name="message"]');
+const FEEDBACK_FORM_STATE_KEY = 'feedback-form-state';
 
-emailInput.addEventListener("input", saveFeddbackFormState);
-messageInput.addEventListener("input", saveFeddbackFormState);
+const feedbackForm = document.querySelector('.js-feedback-form');
 
-function saveFeddbackFormState() {
-  localStorage.setItem(
-    "feedback-form-state",
-    JSON.stringify({
-      email: emailInput.value,
-      message: messageInput.value,
-    })
-  );
+let formData = {};
+
+feedbackForm.addEventListener('input', throttle(saveFeedbackFormState, 500));
+
+function getFeedbackFormState() {
+  const data = localStorage.getItem(FEEDBACK_FORM_STATE_KEY);
+
+  if (!data) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(data);
+  } catch {
+    console.error('Invalid JSON');
+  }
+}
+
+function saveFeedbackFormState(event) {
+  formData[event.target.name] = event.target.value;
+
+  localStorage.setItem(FEEDBACK_FORM_STATE_KEY, JSON.stringify(formData));
 }
 
 function loadFeedbackFormState() {
-  const feedbackFormState = JSON.parse(
-    localStorage.getItem("feedback-form-state")
-  );
-  if (!feedbackFormState) {
+  formData = getFeedbackFormState();
+
+  if (!formData) {
     return;
   }
-  emailInput.value = feedbackFormState.email;
-  messageInput.value = feedbackFormState.message;
+
+  Object.entries(formData).forEach(item => {
+    let key = item[0];
+    let value = item[1];
+    feedbackForm.elements[key].value = value;
+  });
 }
+
 loadFeedbackFormState();
 
-feedbackForm.addEventListener("submit", function (event) {
+feedbackForm.addEventListener('submit', onSubmit);
+
+function onSubmit(event) {
   event.preventDefault();
-  console.log(JSON.parse(localStorage.getItem("feedback-form-state")));
-  localStorage.removeItem("feedback-form-state");
-  feedbackForm.reset();
-});
+
+  console.log(formData);
+  formData = {};
+
+  localStorage.removeItem(FEEDBACK_FORM_STATE_KEY);
+  event.target.reset();
+}
